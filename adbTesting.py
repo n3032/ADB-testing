@@ -1,11 +1,7 @@
-# This is a sample Python script.
-
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
-
 import pyvisa
 import time
 import csv
+from datetime import datetime
 
 def format_time(seconds: float) -> str:
     minutes = int(seconds) // 60
@@ -18,14 +14,13 @@ chan3 = 3
 volt7V2 = 7.2
 volt3V3 = 3.3
 currThreshold = 0.5
-currLim = 2.0
+currLim = 3.0
 iterations = 1
 maxIterations = 3
-timeTotal = 0
 
 psu = pyvisa.ResourceManager().open_resource('TCPIP0::172.16.2.13::INSTR')
 
-psu.write('*RST') #resets to default state
+psu.write('*RST') # resets to default state
 psu.write(f'INST:NSEL {chan1}') # select channel 1
 psu.write(f'VOLT {volt7V2}') # set voltage
 psu.write(f'CURR {currLim}') # set current limit
@@ -34,6 +29,11 @@ psu.write(f'VOLT {volt3V3}')
 psu.write(f'CURR {currLim}')
 
 time.sleep(0.2)
+
+# keep cumulative results across iterations
+iterTime = []
+iterCurr = []
+iterPower = []
 
 while iterations<=maxIterations:
     psu.write(f'INST:NSEL {chan1}')
@@ -64,8 +64,7 @@ while iterations<=maxIterations:
 
     print(f"test #{iterations} complete. current spike detected")
     print(f"time elapsed: {format_time(timeElapsed)}")
-    timeTotal += timeElapsed
-
+    
     print("resetting")
     psu.write('INST:NSEL 1')
     psu.write('OUTP OFF')
@@ -73,7 +72,9 @@ while iterations<=maxIterations:
     psu.write('OUTP OFF')
     time.sleep(3)
 
-    filename = f"timer_test_{iterations}_data.csv"
+    # per-iteration file with timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")  # e.g. 20260112_153045
+    filename = f"timer_test_{iterations}_{timestamp}_data.csv"
 
     with open(filename, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
@@ -81,15 +82,24 @@ while iterations<=maxIterations:
         for t, c, p in zip(pollTime, curr, power):
             writer.writerow([format_time(t), f"{c:.6f}", f"{p:.6f}"])
 
+    print("data saved to " + filename)
+
+    iterTime.append(timeElapsed)
+    iterCurr.append((sum(curr)-curr[-1])/(len(curr)-1) if curr else 0)
+    iterPower.append((sum(power)-power[-1])/(len(power)-1) if power else 0)
+
     iterations += 1
 
-timeAvg = timeTotal/maxIterations
-print(f"average time: {format_time(timeAvg)}")
+# write final results to a text file
+final_ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+results_filename = f"final_results_{final_ts}.txt"
+with open(results_filename, "w") as f:
+    f.write("Final Results:\n")
+    f.write(f"average time: {format_time(sum(iterTime)/len(iterTime))}\n")
+    f.write(f"average power: {sum(iterPower)/len(iterPower):.6f} W\n")
+    f.write(f"average current: {sum(iterCurr)/len(iterCurr):.6f} A\n")
+    f.write("Individual Iteration Results:\n")
+    for i in range(len(iterTime)):
+        f.write(f"Iteration {i+1}: Time = {format_time(iterTime[i])}, Average current = {iterCurr[i]:.6f} A, Average power = {iterPower[i]:.6f} W\n")
 
-
-
-
-
-
-
-
+print("final results saved to " + results_filename)
