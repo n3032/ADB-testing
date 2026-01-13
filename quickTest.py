@@ -2,14 +2,10 @@
 
 import pyvisa
 import time
-from typing import cast, Protocol
 
-class PSU(Protocol):
-    def write(self, command: str) -> None: ...
-    def query(self, command: str) -> str: ...
+pyvisa.ResourceManager().list_resources()
 
-rm = pyvisa.ResourceManager()
-psu: PSU = cast(PSU, rm.open_resource('TCPIP0::172.16.2.13::INSTR'))
+psu = pyvisa.ResourceManager().open_resource('USB0::0x1AB1::0x0E11::DP8C234305873::INSTR')
 
 def format_time(seconds: float) -> str:
     minutes = int(seconds) // 60
