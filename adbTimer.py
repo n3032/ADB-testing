@@ -2,8 +2,10 @@ import pyvisa
 import time
 import csv
 from datetime import datetime
+from pyvisa.errors import VisaIOError
 
 psu = pyvisa.ResourceManager().open_resource('USB0::0x1AB1::0x0E11::DP8C234305873::INSTR')
+psu.timeout = 1000
 
 def format_time(seconds: float) -> str:
     minutes = int(seconds) // 60
@@ -11,10 +13,7 @@ def format_time(seconds: float) -> str:
     return f"{minutes:02d}:{secs:06.3f}"  # MM:SS.mmm
 
 chan1 = 1
-chan2 = 2
-chan3 = 3
 volt7V2 = 7.2
-volt3V3 = 3.3
 currThreshold = 0.5
 currLim = 3.0
 iterations = 1
@@ -24,9 +23,6 @@ psu.write('*RST') # resets to default state
 psu.write(f'INST:NSEL {chan1}') # select channel 1
 psu.write(f'VOLT {volt7V2}') # set voltage
 psu.write(f'CURR {currLim}') # set current limit
-psu.write(f'INST:NSEL {chan2}')
-psu.write(f'VOLT {volt3V3}')
-psu.write(f'CURR {currLim}')
 
 time.sleep(0.2)
 
@@ -40,8 +36,6 @@ print("Starting timer test...\n")
 while iterations<=maxIterations:
     psu.write(f'INST:NSEL {chan1}')
     psu.write('OUTP ON')
-    psu.write(f'INST:NSEL {chan2}')
-    psu.write('OUTP ON')
 
     t0 = time.time() #start time
 
@@ -53,27 +47,50 @@ while iterations<=maxIterations:
     pollTime = []
     curr = []
     power = []
+    errors = 0
 
+    psu.write(f'INST:NSEL {chan1}')
     while testing:
-        psu.write(f'INST:NSEL {chan1}')
-        curr.append(float(psu.query('MEAS:CURR?')))
-        power.append(float(psu.query('MEAS:POWE?')))
+        try:
+            curr_val = float(psu.query('MEAS:CURR?'))
+            pow_val = float(psu.query('MEAS:POWE?'))
+        except VisaIOError:
+            psu.clear()          # clears IO buffers
+            time.sleep(1)
+            errors += 1
+            if errors > 5:
+                psu.close()
+                time.sleep(2)
+                psu = pyvisa.ResourceManager().open_resource('USB0::0x1AB1::0x0E11::DP8C234305873::INSTR')
+                print("PSU connection reset due to repeated timeouts")
+                psu.timeout = 1000
+                psu.write('*RST') # resets to default state
+                psu.write(f'INST:NSEL {chan1}') # select channel 1
+                psu.write(f'VOLT {volt7V2}') # set voltage
+                psu.write(f'CURR {currLim}') # set current limit
+                psu.write(f'INST:NSEL {chan1}')
+                psu.write('OUTP ON')
+            continue             # retry loop
         timeElapsed = time.time() - t0
 
-        print(f"Time: {format_time(timeElapsed)}, Current: {curr[-1]:.3f} A, Power: {power[-1]:.3f} W")
+        print(f"Time: {format_time(timeElapsed)}, Current: {curr_val:.3f} A, Power: {pow_val:.3f} W")
 
-        if curr[-1] >= currThreshold: testing = False
-        
+        if curr_val >= currThreshold: testing = False
+
+        curr.append(curr_val)
+        power.append(pow_val)
         pollTime.append(timeElapsed)
         time.sleep(0.25) #polling interval
+        if (timeElapsed % 60) < 0.25:
+            err = psu.query('SYST:ERR?')
+            if not err.startswith('0'):
+                print("PSU error:", err)
 
     print(f"test #{iterations} complete. current spike detected\n")
     print(f"time elapsed: {format_time(timeElapsed)}\n")
 
     print("resetting\n")
     psu.write('INST:NSEL 1')
-    psu.write('OUTP OFF')
-    psu.write('INST:NSEL 2')
     psu.write('OUTP OFF')
     time.sleep(3)
 
