@@ -1,11 +1,8 @@
-# WIP
-
 import pyvisa
 import time
 import csv
 from datetime import datetime
 from typing import cast, Protocol
-from pyvisa.resources.resource import Resource
 
 class PSU(Protocol):
     def write(self, command: str) -> None: ...
