@@ -8,7 +8,13 @@ import sys
 
 psu = pyvisa.ResourceManager().open_resource('USB0::0x1AB1::0x0E11::DP8C234305873::INSTR')
 ad = dwf.Device()
+if ad is None:
+    print("failed to open DWF device")
+    sys.exit(1)
 io = ad.digital_io
+if io is None:
+    print("failed to open DWF digital IO")
+    sys.exit(1)
 io[0].setup(enabled = True, state = False)
 io[1].setup(enabled = False, configure = True)
 io[2].setup(enabled = False, configure = True)
@@ -43,6 +49,7 @@ volt7V2 = 7.2
 rbfCurrThreshold = 0.004
 burnCurrThreshold = 0.5
 currLim = 3.0
+errors = 0
 
 DET1 = 1
 DET2 = 2
@@ -57,9 +64,11 @@ time.sleep(0.2)
 print("Starting full functional test...\n")
 
 print("Ensure the following before proceeding:")
+print("*  GND is connected to EGSE GND.")
 print("*  DIO0 is connected to EGSE BURN.")
 print("*  DIO1 is connected to EGSE DET_1.")
 print("*  DIO2 is connected to EGSE DET_2.")
+print("*  ADB is NOT connected to the EGSE.")
 ask("Connections verified?")
 
 print("Testing BURN functionality...")
@@ -71,7 +80,9 @@ print("*  Set up and tension burn wires.\n")
 
 ask("Verified stability of burn wires?")
 
-ask("EGSE connected?")
+print("*  Connect ADB to EGSE.")
+
+ask("ADB connected to EGSE?")
 
 print("Turning on EGSE...")
 
@@ -150,6 +161,8 @@ volt = []
 power = []
 errors = 0
 burning = False
+burnStartIndex = 0
+burnTime = 0.0
 
 psu.write(f'INST:NSEL {chan1}')
 while testing:
@@ -194,6 +207,7 @@ while testing:
         testing = False
 
     curr.append(curr_val)
+    volt.append(volt_val)
     power.append(pow_val)
     pollTime.append(timeElapsed)
     time.sleep(0.25)
@@ -216,7 +230,7 @@ with open(f"full_functional_test_{timestamp}_data.csv", 'w', newline='') as csvf
     for t, c, p in zip(pollTime, curr, power):
         writer.writerow([format_time(t), f"{c:.6f}", f"{p:.6f}"])
 
-print("data saved to " + filename)
+print("data saved to " + f"full_functional_test_{timestamp}_data.csv")
 
 # write final results to a text file
 with open(f"full_functional_test_{timestamp}.txt", "w") as f:
@@ -242,4 +256,4 @@ with open(f"full_functional_test_{timestamp}.txt", "w") as f:
     f.write(f"Overall average power: {sum(power)/len(power):.6f} W\n")
     f.write(f"Total energy consumed: {sum(power)*timeElapsed/len(power):.3f} J\n")
 
-print("Final results saved to " + results_filename)
+print("Final results saved to " + f"full_functional_test_{timestamp}.txt")
