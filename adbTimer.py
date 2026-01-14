@@ -62,7 +62,7 @@ while iterations<=maxIterations:
                 psu.close()
                 time.sleep(2)
                 psu = pyvisa.ResourceManager().open_resource('USB0::0x1AB1::0x0E11::DP8C234305873::INSTR')
-                print("PSU connection reset due to repeated timeouts")
+                print("PSU connection reset due to repeated timeouts; timer may be reset")
                 psu.timeout = 1000
                 psu.write('*RST') # resets to default state
                 psu.write(f'INST:NSEL {chan1}') # select channel 1
