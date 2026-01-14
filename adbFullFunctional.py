@@ -1,5 +1,6 @@
 import pyvisa
-import dwfpy
+from pyvisa.errors import VisaIOError
+import dwfpy as dwf
 import time
 import csv
 from datetime import datetime
@@ -39,7 +40,7 @@ def burn(burn: bool):
 
 chan1 = 1
 volt7V2 = 7.2
-rbfCurrThreshold = 0.009
+rbfCurrThreshold = 0.004
 burnCurrThreshold = 0.5
 currLim = 3.0
 
@@ -111,7 +112,7 @@ print("*  Tape SW1 and SW2 down.")
 ask("Ready to remove RBF?")
 
 print("*  Remove RBF from J2")
-print("*  Waiting for current spike indicating RBF removal...")
+print("Waiting for current spike indicating RBF removal...")
 
 while True:
     try:
@@ -195,10 +196,7 @@ while testing:
     curr.append(curr_val)
     power.append(pow_val)
     pollTime.append(timeElapsed)
-    if burning:
-        time.sleep(0.05)
-    else:
-        time.sleep(0.25)        # polling interval
+    time.sleep(0.25)
     if (timeElapsed % 60) < 0.25:
         err = psu.query('SYST:ERR?')
         if not err.startswith('0'):
