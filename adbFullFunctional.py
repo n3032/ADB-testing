@@ -1,26 +1,38 @@
 import pyvisa
 from pyvisa.errors import VisaIOError
-import dwfpy as dwf
 import time
 import csv
 from datetime import datetime
 import sys
+from ctypes import *
 
-psu = pyvisa.ResourceManager().open_resource('USB0::0x1AB1::0x0E11::DP8C234305873::INSTR')
-with dwf.Device() as ad:
-    input = ad.digital_input
+# Load Digilent WaveForms SDK
+if sys.platform.startswith("win"):
+    dwf = cdll.dwf
+elif sys.platform.startswith("darwin"):
+    dwf = cdll.LoadLibrary("/Library/Frameworks/dwf.framework/dwf")
+else:
+    dwf = cdll.LoadLibrary("libdwf.so")
 
+hdwf = c_int()
 
-if ad is None:
+if dwf.FDwfDeviceOpen(c_int(-1), byref(hdwf)) == 0:
     print("failed to open DWF device")
     sys.exit(1)
 
+psu = pyvisa.ResourceManager().open_resource('USB0::0x1AB1::0x0E11::DP8C234305873::INSTR')
 
-input.dio_first = True
+#chat changes-----
+# DIO configuration
+# DIO0 = BURN (output)
+# DIO1 = DET1 (input)
+# DIO2 = DET2 (input)
 
-io[0].setup(enabled=True, state=True)  # BURN output
-io[1].setup(enabled=True, configure=True)  # DET1 input
-io[2].setup(enabled=True, configure=True)  # DET2 input
+dwf.FDwfDigitalIOOutputEnableSet(hdwf, c_int(0b00000001))  # DIO0 output
+dwf.FDwfDigitalIOOutputSet(hdwf, c_int(0))                # BURN LOW
+
+dwf.FDwfDigitalIOInputEnableSet(hdwf, c_int(0b00000110))  # DIO1, DIO2 inputs
+#------
 
 def format_time(seconds: float) -> str:
     minutes = int(seconds) // 60
@@ -40,11 +52,16 @@ def ask(prompt: str):
             break
 
 def read_DIO(pin: int) -> bool:
-    io.read_status()
-    return io[pin].input_state
+    dwRead = c_uint32() #io states returned as 32 bitmask
+    dwf.FDwfDigitalIOStatus(hdwf) #sub for io.read_status
+    dwf.FDwfDigitalIOInputStatus(hdwf, byref(dwRead)) #writes pin logic levels to dwRead
+    return bool(dwRead.value & (1 << pin)) #extracts the pin we want
 
 def burn(state: bool):
-    io[0].output_state = state
+    dwf.FDwfDigitalIOOutputSet(
+        hdwf, 
+        c_int(1 if state else 0)
+    )
 
 
 chan1 = 1
