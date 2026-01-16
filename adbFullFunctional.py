@@ -91,7 +91,7 @@ print("*  DIO2 is connected to EGSE DET_2.")
 print("*  ADB is NOT connected to the EGSE.")
 ask("Connections verified?")
 
-print("Testing BURN functionality...")
+print("Testing BURN signal connection...")
 burn(True)
 ask("Verified EGSE BURN is ON?")
 burn(False)
@@ -135,6 +135,36 @@ print("Waiting for DET2 to release...")
 while not read_DIO(DET2):
     time.sleep(0.1)
 print("DET2 released.")
+
+print("*  Depress both SW1 and SW2.")
+ask("Ready to test burn signal functionality?")
+print("Testing BURN signal functionality...")
+burn(True)
+while True:
+    try:
+        curr_val = float(psu.query('MEAS:CURR?'))
+    except VisaIOError: # this was chatgpt'd 
+        psu.clear()          # clears IO buffers
+        time.sleep(1)
+        errors += 1
+        if errors > 5:
+            psu.close()
+            time.sleep(2)
+            psu = pyvisa.ResourceManager().open_resource('USB0::0x1AB1::0x0E11::DP8C234305873::INSTR')
+            print("PSU connection reset due to repeated timeouts")
+            psu.timeout = 1000
+            psu.write('*RST') # resets to default state
+            psu.write(f'INST:NSEL {chan1}') # select channel 1
+            psu.write(f'VOLT {volt7V2}') # set voltage
+            psu.write(f'CURR {currLim}') # set current limit
+            psu.write(f'INST:NSEL {chan1}')
+            psu.write('OUTP ON')
+        continue             # retry loop
+    if curr_val >= burnCurrThreshold:
+        break
+burn(False)
+print("Burn signal functionality verified.\n")
+print("*  Release SW1 and SW2.")
 
 print("*  Connect RBF to J2")
 ask("Verified DS1 is OFF?")
@@ -241,7 +271,6 @@ while testing:
 print("Shutting off power...\n")
 psu.write('INST:NSEL 1')
 psu.write('OUTP OFF')
-time.sleep(3)
 
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")  # e.g. 20260112_153045
 
@@ -251,14 +280,11 @@ with open(f"full_functional_test_{timestamp}_data.csv", 'w', newline='') as csvf
     for t, v, c, p in zip(pollTime, volt, curr, power):
         writer.writerow([format_time(t), f"{v:.4f}", f"{c:.4f}", f"{p:.4f}"])
 
-print("data saved to " + f"full_functional_test_{timestamp}_data.csv")
-
-# In the final results section:
+print("Data saved to " + f"full_functional_test_{timestamp}_data.csv")
 
 timer_segment_duration = burnTime
 burn_segment_duration = timeElapsed - burnTime
 
-# Helper function for safe averaging
 def safe_avg(data):
     return sum(data) / len(data) if data else 0
 

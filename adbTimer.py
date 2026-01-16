@@ -39,7 +39,7 @@ while iterations<=maxIterations:
 
     t0 = time.time() #start time
 
-    print("output on\n")
+    print("Output enabled.\n")
 
     testing = True
 
@@ -52,6 +52,7 @@ while iterations<=maxIterations:
     psu.write(f'INST:NSEL {chan1}')
     while testing:
         try:
+            volt_val = float(psu.query('MEAS:VOLT?'))
             curr_val = float(psu.query('MEAS:CURR?'))
             pow_val = float(psu.query('MEAS:POWE?'))
         except VisaIOError:
@@ -73,7 +74,7 @@ while iterations<=maxIterations:
             continue             # retry loop
         timeElapsed = time.time() - t0
 
-        print(f"Time: {format_time(timeElapsed)}, Current: {curr_val:.3f} A, Power: {pow_val:.3f} W")
+        print(f"Time: {format_time(timeElapsed)}, Voltage: {volt_val:.3f}, Current: {curr_val:.3f} A, Power: {pow_val:.3f} W")
 
         if curr_val >= currThreshold: testing = False
 
@@ -86,10 +87,10 @@ while iterations<=maxIterations:
             if not err.startswith('0'):
                 print("PSU error:", err)
 
-    print(f"test #{iterations} complete. current spike detected\n")
-    print(f"time elapsed: {format_time(timeElapsed)}\n")
+    print(f"Test #{iterations} complete; Current spike detected\n")
+    print(f"Time elapsed: {format_time(timeElapsed)}\n")
 
-    print("resetting\n")
+    print("Resetting...\n")
     psu.write('INST:NSEL 1')
     psu.write('OUTP OFF')
     time.sleep(3)
@@ -104,7 +105,7 @@ while iterations<=maxIterations:
         for t, c, p in zip(pollTime, curr, power):
             writer.writerow([format_time(t), f"{c:.6f}", f"{p:.6f}"])
 
-    print("data saved to " + filename)
+    print("Data saved to " + filename)
 
     iterTime.append(timeElapsed)
     iterCurr.append((sum(curr)-curr[-1])/(len(curr)-1) if curr else 0)
@@ -112,7 +113,6 @@ while iterations<=maxIterations:
 
     iterations += 1
 
-# write final results to a text file
 final_ts = datetime.now().strftime("%Y%m%d_%H%M%S")
 results_filename = f"final_results_{final_ts}.txt"
 with open(results_filename, "w") as f:
@@ -124,4 +124,4 @@ with open(results_filename, "w") as f:
     for i in range(len(iterTime)):
         f.write(f"Iteration {i+1}: Time = {format_time(iterTime[i])}, Average current = {iterCurr[i]:.6f} A, Average power = {iterPower[i]:.6f} W\n")
 
-print("final results saved to " + results_filename)
+print("Final results saved to " + results_filename)

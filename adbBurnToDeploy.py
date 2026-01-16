@@ -1,5 +1,3 @@
-# WIP
-
 import pyvisa
 from pyvisa.errors import VisaIOError
 import dwfpy as dwf
@@ -51,8 +49,6 @@ def burn(burn: bool):
 
 chan1 = 1
 volt7V2 = 7.2
-rbfCurrThreshold = 0.004
-burnCurrThreshold = 0.5
 currLim = 3.0
 errors = 0
 
@@ -66,7 +62,7 @@ psu.write(f'CURR {currLim}') # set current limit
 
 time.sleep(0.2)
 
-print("Starting full functional test...\n")
+print("Starting burn wire consistency test...\n")
 
 print("Ensure the following before proceeding:")
 print("*  GND is connected to EGSE GND.")
@@ -94,66 +90,12 @@ print("Turning on EGSE...")
 psu.write(f'INST:NSEL {chan1}')
 psu.write('OUTP ON')
 
-ask("Verified DS1 is ON and EGSE BURN is OFF?")
+print("*  Set up antennas, and depress SW1 and SW2.")
+ask("Ready to begin burn test?")
 
-print("*  Depress SW1.")
-print("Waiting for DET1 to trigger...")
-while not read_DIO(DET1):
-    time.sleep(0.1)
-print("DET1 triggered.")
-ask("Verified DS2 is ON and EGSE DET1 is OFF?")
+burn(True)
 
-print("*  Release SW1.")
-print("Waiting for DET1 to release...")
-while read_DIO(DET1):
-    time.sleep(0.1)
-print("DET1 released.")
-
-print("*  Depress SW2.")
-print("Waiting for DET2 to trigger...")
-while not read_DIO(DET2):
-    time.sleep(0.1)
-ask("Verified DS2 is ON and EGSE DET2 is OFF?")
-
-print("*  Release SW2.")
-print("Waiting for DET2 to release...")
-while read_DIO(DET2):
-    time.sleep(0.1)
-print("DET2 released.")
-
-print("*  Connect RBF to J2")
-ask("Verified DS1 is OFF?")
-
-print("*  Tape SW1 and SW2 down.")
-ask("Ready to remove RBF?")
-
-print("*  Remove RBF from J2")
-print("Waiting for current spike indicating RBF removal...")
-
-while True:
-    try:
-        curr_val = float(psu.query('MEAS:CURR?'))
-    except VisaIOError: # this was chatgpt'd 
-        psu.clear()          # clears IO buffers
-        time.sleep(1)
-        errors += 1
-        if errors > 5:
-            psu.close()
-            time.sleep(2)
-            psu = pyvisa.ResourceManager().open_resource('USB0::0x1AB1::0x0E11::DP8C234305873::INSTR')
-            print("PSU connection reset due to repeated timeouts")
-            psu.timeout = 1000
-            psu.write('*RST') # resets to default state
-            psu.write(f'INST:NSEL {chan1}') # select channel 1
-            psu.write(f'VOLT {volt7V2}') # set voltage
-            psu.write(f'CURR {currLim}') # set current limit
-            psu.write(f'INST:NSEL {chan1}')
-            psu.write('OUTP ON')
-        continue             # retry loop
-    if curr_val >= rbfCurrThreshold:
-        break
-
-print("RBF removal current spike detected. Starting timer...\n")
+print("Burn test started. Monitoring deployment...\n")
 
 t0 = time.time() #start time
 
@@ -165,7 +107,6 @@ curr = []
 volt = []
 power = []
 errors = 0
-burning = False
 burnStartIndex = 0
 burnTime = 0.0
 
@@ -196,18 +137,7 @@ while testing:
 
     print(f"Time: {format_time(timeElapsed)}, Voltage: {volt_val:.3f}V, Current: {curr_val:.6f} A, Power: {pow_val:.6f} W")
 
-    if curr_val >= burnCurrThreshold and not burning:
-        print("Timer triggered at time:", format_time(timeElapsed))
-        burnStartIndex = len(curr)
-        burnTime = timeElapsed
-        burning = True
-
-    if not burning and (read_DIO(DET1) or read_DIO(DET2)):
-        print("Test aborted due to early deployment detection.")
-        testing = False
-        break
-
-    if burning and (read_DIO(DET1) and read_DIO(DET2)):
+    if (read_DIO(DET1) and read_DIO(DET2)):
         print("Both deployments detected. Ending test.")
         testing = False
 
@@ -223,38 +153,22 @@ while testing:
 
 
 print("Shutting off power...\n")
+burn(False)
 psu.write('INST:NSEL 1')
 psu.write('OUTP OFF')
-time.sleep(3)
 
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")  # e.g. 20260112_153045
 
-with open(f"full_functional_test_{timestamp}_data.csv", 'w', newline='') as csvfile:
+with open(f"burn_test_{timestamp}_data.csv", 'w', newline='') as csvfile:
     writer = csv.writer(csvfile)
     writer.writerow(['Time (MM:SS.mmm)', 'Current (A)', 'Power (W)'])
     for t, c, p in zip(pollTime, curr, power):
         writer.writerow([format_time(t), f"{c:.6f}", f"{p:.6f}"])
 
-print("data saved to " + f"full_functional_test_{timestamp}_data.csv")
+print("Data saved to " + f"burn_test_{timestamp}_data.csv")
 
-# write final results to a text file
-with open(f"full_functional_test_{timestamp}.txt", "w") as f:
+with open(f"burn_test_{timestamp}.txt", "w") as f:
     f.write(f"Final Results for test {timestamp}\n")
-    f.write("Timer segment:\n")
-    f.write(f"Time elapsed: {format_time(burnTime)}\n")
-    f.write(f"Average voltage: {sum(volt[:burnStartIndex])/len(volt[:burnStartIndex]):.6f} V\n")
-    f.write(f"Average current: {sum(curr[:burnStartIndex])/len(curr[:burnStartIndex]):.6f} A\n")
-    f.write(f"Average power: {sum(power[:burnStartIndex])/len(power[:burnStartIndex]):.6f} W\n")
-    f.write(f"Energy consumed: {sum(power[:burnStartIndex])/len(power[:burnStartIndex])*burnTime:.3f} J\n")
-    f.write("\n")
-    f.write("Burn segment:\n")
-    f.write(f"Time elapsed: {format_time(timeElapsed - burnTime)}\n")
-    f.write(f"Average voltage: {sum(volt[burnStartIndex:])/len(volt[burnStartIndex:]):.6f} V\n")
-    f.write(f"Average current: {sum(curr[burnStartIndex:])/len(curr[burnStartIndex:]):.6f} A\n")
-    f.write(f"Average power: {sum(power[burnStartIndex:])/len(power[burnStartIndex:]):.6f} W\n")
-    f.write(f"Energy consumed: {sum(power[burnStartIndex:])/len(power[burnStartIndex:])*(timeElapsed - burnTime):.3f} J\n")
-    f.write("\n")
-    f.write("Overall Results:\n")
     f.write(f"Total time elapsed: {format_time(timeElapsed)}\n")
     f.write(f"Overall average voltage: {sum(volt)/len(volt):.6f} V\n")
     f.write(f"Overall average current: {sum(curr)/len(curr):.6f} A\n")
