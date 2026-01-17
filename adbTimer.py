@@ -28,8 +28,10 @@ time.sleep(0.2)
 
 # keep cumulative results across iterations
 iterTime = []
+iterVolt = []
 iterCurr = []
 iterPower = []
+iterEnergy = []
 
 print("Starting timer test...\n")
 
@@ -114,8 +116,10 @@ while iterations<=maxIterations:
     print("Data saved to " + filename)
 
     iterTime.append(timeElapsed)
+    iterVolt.append((sum(volt)-curr[-1])/(len(volt)-1) if volt else 0)
     iterCurr.append((sum(curr)-curr[-1])/(len(curr)-1) if curr else 0)
     iterPower.append((sum(power)-power[-1])/(len(power)-1) if power else 0)
+    iterEnergy.append(iterPower[-1]*iterTime[-1])
 
     iterations += 1
 
@@ -124,10 +128,12 @@ results_filename = f"final_results_{final_ts}.txt"
 with open(results_filename, "w") as f:
     f.write("Final Results:\n")
     f.write(f"average time: {format_time(sum(iterTime)/len(iterTime))}\n")
-    f.write(f"average power: {sum(iterPower)/len(iterPower):.6f} W\n")
+    f.write(f"average voltage: {sum(iterVolt)/len(iterVolt):.6f} V\n")
     f.write(f"average current: {sum(iterCurr)/len(iterCurr):.6f} A\n")
+    f.write(f"average power: {sum(iterPower)/len(iterPower):.6f} W\n")
+    f.write(f"average energy: {sum(iterEnergy)/len(iterEnergy):.6f} J\n\n")
     f.write("Individual Iteration Results:\n")
     for i in range(len(iterTime)):
-        f.write(f"Iteration {i+1}: Time = {format_time(iterTime[i])}, Average current = {iterCurr[i]:.6f} A, Average power = {iterPower[i]:.6f} W\n")
+        f.write(f"Iteration {i+1}: Time = {format_time(iterTime[i])}, Average voltage = {iterVolt[i]:.6f} V, Average current = {iterCurr[i]:.6f} A, Average power = {iterPower[i]:.6f} W, Total energy = {iterEnergy[i]:.6f} J\n")
 
 print("Final results saved to " + results_filename)
