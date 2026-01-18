@@ -17,7 +17,7 @@ volt7V2 = 7.2
 currThreshold = 0.5
 currLim = 3.0
 iterations = 1
-maxIterations = 3
+maxIterations = 1
 
 psu.write('*RST') # resets to default state
 psu.write(f'INST:NSEL {chan1}') # select channel 1
@@ -60,6 +60,7 @@ while iterations<=maxIterations:
             volt_val = float(psu.query('MEAS:VOLT?'))
             curr_val = float(psu.query('MEAS:CURR?'))
             pow_val = float(psu.query('MEAS:POWE?'))
+            errors = 0
         except VisaIOError:
             psu.clear()          # clears IO buffers
             time.sleep(1)
@@ -134,6 +135,10 @@ with open(results_filename, "w") as f:
     f.write(f"average energy: {sum(iterEnergy)/len(iterEnergy):.6f} J\n\n")
     f.write("Individual Iteration Results:\n")
     for i in range(len(iterTime)):
-        f.write(f"Iteration {i+1}: Time = {format_time(iterTime[i])}, Average voltage = {iterVolt[i]:.6f} V, Average current = {iterCurr[i]:.6f} A, Average power = {iterPower[i]:.6f} W, Total energy = {iterEnergy[i]:.6f} J\n")
+        f.write(f"Iteration {i+1}: Time = {format_time(iterTime[i])}, ")
+        f.write(f"Average voltage = {iterVolt[i]:.6f} V, ")
+        f.write(f"Average current = {iterCurr[i]:.6f} A, ")
+        f.write(f"Average power = {iterPower[i]:.6f} W, ")
+        f.write(f"Total energy = {iterEnergy[i]:.6f} J\n")
 
 print("Final results saved to " + results_filename)

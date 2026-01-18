@@ -145,7 +145,6 @@ while testing:
     volt.append(volt_val)
     power.append(pow_val)
     pollTime.append(timeElapsed)
-    time.sleep(0.25)
     if (timeElapsed % 60) < 0.25:
         err = psu.query('SYST:ERR?')
         if not err.startswith('0'):
