@@ -17,7 +17,7 @@ volt7V2 = 7.2
 currThreshold = 0.5
 currLim = 3.0
 iterations = 1
-maxIterations = 1
+maxIterations = 2
 
 psu.write('*RST') # resets to default state
 psu.write(f'INST:NSEL {chan1}') # select channel 1
@@ -60,17 +60,19 @@ while iterations<=maxIterations:
             volt_val = float(psu.query('MEAS:VOLT?'))
             curr_val = float(psu.query('MEAS:CURR?'))
             pow_val = float(psu.query('MEAS:POWE?'))
-            errors = 0
+            time.sleep(0.25) #polling interval
         except VisaIOError:
+            print("VisaIOError!")
             psu.clear()          # clears IO buffers
-            time.sleep(1)
+            time.sleep(0.01)
             errors += 1
             if errors > 5:
+                 psu.clear()
  #               psu.close()
  #               time.sleep(2)
  #               psu = pyvisa.ResourceManager().open_resource('USB0::0x1AB1::0x0E11::DP8C234305873::INSTR')
-                errorCountTotal += 1
-                print("PSU connection reset due to repeated timeouts; error count updated to: " + str(errorCountTotal))
+                 errorCountTotal += 1
+                 print("PSU connection reset due to repeated timeouts; error count updated to: " + str(errorCountTotal))
  #               psu.timeout = 1000
  #               psu.write('*RST') # resets to default state
  #               psu.write(f'INST:NSEL {chan1}') # select channel 1
@@ -90,7 +92,6 @@ while iterations<=maxIterations:
         volt.append(volt_val)
         errorLog.append(errorCountTotal)
         pollTime.append(timeElapsed)
-        time.sleep(0.25) #polling interval
         if (timeElapsed % 60) < 0.25:
             err = psu.query('SYST:ERR?')
             if not err.startswith('0'):
