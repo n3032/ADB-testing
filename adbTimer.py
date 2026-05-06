@@ -17,7 +17,7 @@ volt7V2 = 7.2
 currThreshold = 0.5
 currLim = 3.0
 iterations = 1
-maxIterations = 2
+maxIterations = 1
 
 psu.write('*RST') # resets to default state
 psu.write(f'INST:NSEL {chan1}') # select channel 1

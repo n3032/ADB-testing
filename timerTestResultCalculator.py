@@ -45,6 +45,12 @@ if __name__ == "__main__":
                 errors += 1
                 downtime += times[i] - times[i-1]
 
+        ticks = 0
+
+        for i in range(len(powers)):
+            if i > 0 and powers[i] > 0.08 and powers[i-1] < 0.08:
+                ticks += 1
+
         print(f"File: {p}")
         print(f"  samples: {len(times)}")
         print(f"  final time: {format_time(times[-1])}")
@@ -53,3 +59,4 @@ if __name__ == "__main__":
         print(f"  total energy: {avg(powers)*times[-1]:.3f} J")
         print(f"  detected errors (time gaps >1s): {errors}\n")
         print(f"  total downtime due to errors: {format_time(downtime)}\n")
+        print(f"  total ticks: {ticks}\n")

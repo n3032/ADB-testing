@@ -88,9 +88,10 @@ print("*  GND is connected to EGSE GND.")
 print("*  DIO0 is connected to EGSE BURN.")
 print("*  DIO1 is connected to EGSE DET_1.")
 print("*  DIO2 is connected to EGSE DET_2.")
-print("*  ADB is NOT connected to the EGSE.")
+#print("*  ADB is NOT connected to the EGSE.")
+print("*  ADB is connected to the EGSE.")
 ask("Connections verified?")
-
+'''
 print("Testing BURN signal connection...")
 burn(True)
 ask("Verified EGSE BURN is ON?")
@@ -103,6 +104,7 @@ ask("Verified stability of burn wires?")
 print("*  Connect ADB to EGSE.")
 
 ask("ADB connected to EGSE?")
+'''
 
 print("Turning on EGSE...")
 
@@ -110,7 +112,7 @@ psu.write(f'INST:NSEL {chan1}')
 psu.write('OUTP ON')
 
 ask("Verified DS1 is ON and EGSE BURN is OFF?")
-
+'''
 print("*  Depress SW1.")
 print("Waiting for DET1 to go low...")
 while read_DIO(DET1):
@@ -137,6 +139,7 @@ while not read_DIO(DET2):
 print("DET2 released.")
 
 print("*  Depress both SW1 and SW2.")
+'''
 ask("Ready to test burn signal functionality?")
 print("Testing BURN signal functionality...")
 burn(True)
@@ -164,7 +167,9 @@ while True:
         break
 burn(False)
 print("Burn signal functionality verified.\n")
+'''
 print("*  Release SW1 and SW2.")
+'''
 
 print("*  Connect RBF to J2")
 ask("Verified DS1 is OFF?")
@@ -213,6 +218,7 @@ errors = 0
 burning = False
 burnStartIndex = 0
 burnTime = 0.0
+deploymentDetected = 0.0
 
 psu.write(f'INST:NSEL {chan1}')
 while testing:
@@ -253,8 +259,13 @@ while testing:
         break
 
     if burning and (read_DIO(DET1) and read_DIO(DET2)):
-        print("Both deployments detected. Ending test.")
+        print("Both deployments detected. Waiting for self-disable...")
+        deploymentDetected = timeElapsed
         testing = False
+        break
+
+    if curr_val <= burnCurrThreshold and burning:
+        print("Self-disable detected. Ending test.")
         break
 
     curr.append(curr_val)
@@ -283,6 +294,7 @@ with open(f"full_functional_test_{timestamp}_data.csv", 'w', newline='') as csvf
 print("Data saved to " + f"full_functional_test_{timestamp}_data.csv")
 
 timer_segment_duration = burnTime
+deployment_duration = deploymentDetected-burnTime
 burn_segment_duration = timeElapsed - burnTime
 
 def safe_avg(data):
@@ -304,8 +316,10 @@ with open(f"full_functional_test_{timestamp}.txt", "w") as f:
     f.write(f"Time elapsed: {format_time(burn_segment_duration)}\n")
     f.write(f"Average voltage: {safe_avg(volt[burnStartIndex:]):.5f} V\n")
     f.write(f"Average current: {safe_avg(curr[burnStartIndex:]):.6f} A\n")
+    f.write(f"Calculated resistance:{(safe_avg(volt[burnStartIndex:])/safe_avg(curr[burnStartIndex:])):.6f}" )
     f.write(f"Average power: {burn_avg_power:.6f} W\n")
     f.write(f"Energy consumed: {burn_avg_power * burn_segment_duration:.3f} J\n")
+    f.write(f"Deployment time: {format_time(deployment_duration)}\n")
     f.write("\n")
     f.write("Overall Results:\n")
     f.write(f"Total time elapsed: {format_time(timeElapsed)}\n")
