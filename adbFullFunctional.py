@@ -31,7 +31,7 @@ psu = pyvisa.ResourceManager().open_resource('USB0::0x1AB1::0x0E11::DP8C23430587
 dwf.FDwfDigitalIOOutputEnableSet(hdwf, c_int(0b00000001))  # DIO0 output
 dwf.FDwfDigitalIOOutputSet(hdwf, c_int(0))                # BURN LOW
 
-dwf.FDwfDigitalIOInputEnableSet(hdwf, c_int(0b00000110))  # DIO1, DIO2 inputs
+# dwf.FDwfDigitalIOInputEnableSet(hdwf, c_int(0b00000110))  # DIO1, DIO2 inputs
 #------
 
 def format_time(seconds: float) -> str:
