@@ -1,23 +1,45 @@
 import pyvisa
 from pyvisa.errors import VisaIOError
-import dwfpy as dwf
 import time
 import csv
 from datetime import datetime
 import sys
+from ctypes import *
+from dwfconstants import *
 
-psu = pyvisa.ResourceManager().open_resource('USB0::0x1AB1::0x0E11::DP8C234305873::INSTR')
-ad = dwf.Device()
-if ad is None:
+# Load Digilent WaveForms SDK
+if sys.platform.startswith("win"):
+    dwf = cdll.dwf
+elif sys.platform.startswith("darwin"):
+    dwf = cdll.LoadLibrary("/Library/Frameworks/dwf.framework/dwf")
+else:
+    dwf = cdll.LoadLibrary("libdwf.so")
+
+hdwf = c_int()
+
+if dwf.FDwfDeviceOpen(c_int(-1), byref(hdwf)) == 0:
     print("failed to open DWF device")
     sys.exit(1)
-io = ad.digital_io
-if io is None:
-    print("failed to open DWF digital IO")
-    sys.exit(1)
-io[0].setup(enabled = True, state = False)
-io[1].setup(enabled = False, configure = True)
-io[2].setup(enabled = False, configure = True)
+
+# Set parameter for what happens when device closes
+dwf.FDwfParamSet(DwfParamOnClose, c_int(0))  # 0 = run, 1 = stop, 2 = shutdown
+
+# Disable auto-configure to manually configure Digital IO
+dwf.FDwfDeviceAutoConfigureSet(hdwf, c_int(0))
+
+psu = pyvisa.ResourceManager().open_resource('USB0::0x1AB1::0x0E11::DP8C234305873::INSTR')
+
+# DIO configuration
+# DIO0 = BURN (output)
+# DIO1 = DET1 (input)
+# DIO2 = DET2 (input)
+
+# Enable output on DIO0 (DIO1 and DIO2 will be inputs by default)
+dwf.FDwfDigitalIOOutputEnableSet(hdwf, c_int(0b00000001))
+# Set initial output value
+dwf.FDwfDigitalIOOutputSet(hdwf, c_int(0))
+# Apply the Digital IO configuration
+dwf.FDwfDigitalIOConfigure(hdwf)
 
 def format_time(seconds: float) -> str:
     minutes = int(seconds) // 60
@@ -40,11 +62,17 @@ def ask(prompt: str):
                 print("Please respond with 'y' or 'n'.")
 
 def read_DIO(pin: int) -> bool:
-    io.read_status()
-    return io[pin].input_state
+    dwRead = c_uint32() #io states returned as 32 bitmask
+    dwf.FDwfDigitalIOStatus(hdwf) #sub for io.read_status
+    dwf.FDwfDigitalIOInputStatus(hdwf, byref(dwRead)) #writes pin logic levels to dwRead
+    return bool(dwRead.value & (1 << pin)) #extracts the pin we want
 
-def burn(burn: bool):
-    io[0].output_state = burn
+def burn(state: bool):
+    dwf.FDwfDigitalIOOutputSet(
+        hdwf, 
+        c_int(1 if state else 0)
+    )
+    dwf.FDwfDigitalIOConfigure(hdwf)
 
 
 chan1 = 1
