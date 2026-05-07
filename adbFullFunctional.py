@@ -259,7 +259,7 @@ while testing:
         continue             # retry loop
     timeElapsed = time.time() - t0
 
-    print(f"Time: {format_time(timeElapsed)}, Voltage: {volt_val:.4f}V, Current: {curr_val:.4f} A, Power: {pow_val:.4f} W")
+    print(f"Time: {format_time(timeElapsed)}, Voltage: {volt_val:.4f}V, Current: {curr_val:.4f} A, Power: {pow_val:.3f} W")
 
     if curr_val >= burnCurrThreshold and not burning:
         print("Timer triggered at time:", format_time(timeElapsed))
@@ -295,18 +295,13 @@ while testing:
         if not err.startswith('0'):
             print("PSU error:", err)
 
-
-print("Shutting off power...\n")
-psu.write('INST:NSEL 1')
-psu.write('OUTP OFF')
-
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")  # e.g. 20260112_153045
 
 with open(f"full_functional_test_{timestamp}_data.csv", 'w', newline='') as csvfile:
     writer = csv.writer(csvfile)
     writer.writerow(['Time (MM:SS.mmm)', 'Voltage (V)', 'Current (A)', 'Power (W)'])
     for t, v, c, p in zip(pollTime, volt, curr, power):
-        writer.writerow([format_time(t), f"{v:.4f}", f"{c:.4f}", f"{p:.4f}"])
+        writer.writerow([format_time(t), f"{v:.4f}", f"{c:.4f}", f"{p:.3f}"])
 
 print("Data saved to " + f"full_functional_test_{timestamp}_data.csv")
 
@@ -326,7 +321,7 @@ with open(f"full_functional_test_{timestamp}.txt", "w") as f:
     f.write(f"Time elapsed: {format_time(timer_segment_duration)}\n")
     f.write(f"Average voltage: {safe_avg(volt[:burnStartIndex]):.5f} V\n")
     f.write(f"Average current: {safe_avg(curr[:burnStartIndex]):.6f} A\n")
-    f.write(f"Average power: {timer_avg_power:.6f} W\n")
+    f.write(f"Average power: {timer_avg_power:.5f} W\n")
     f.write(f"Energy consumed: {timer_avg_power * timer_segment_duration:.3f} J\n")
     f.write("\n")
     f.write("Burn segment:\n")
@@ -334,7 +329,7 @@ with open(f"full_functional_test_{timestamp}.txt", "w") as f:
     f.write(f"Average voltage: {safe_avg(volt[burnStartIndex:]):.5f} V\n")
     f.write(f"Average current: {safe_avg(curr[burnStartIndex:]):.6f} A\n")
     f.write(f"Calculated resistance: {(safe_avg(volt[burnStartIndex:])/safe_avg(curr[burnStartIndex:])):.3f} ohms\n" )
-    f.write(f"Average power: {burn_avg_power:.6f} W\n")
+    f.write(f"Average power: {burn_avg_power:.5f} W\n")
     f.write(f"Energy consumed: {burn_avg_power * burn_segment_duration:.3f} J\n")
     f.write(f"Deployment time: {format_time(deployment_duration)}\n")
     f.write("\n")
@@ -342,8 +337,8 @@ with open(f"full_functional_test_{timestamp}.txt", "w") as f:
     f.write(f"Total time elapsed: {format_time(timeElapsed)}\n")
     f.write(f"Overall average voltage: {safe_avg(volt):.5f} V\n")
     f.write(f"Overall average current: {safe_avg(curr):.6f} A\n")
-    f.write(f"Overall average power: {safe_avg(power):.6f} W\n")
+    f.write(f"Overall average power: {safe_avg(power):.5f} W\n")
     f.write(f"Total energy consumed: {safe_avg(power) * timeElapsed:.3f} J\n")
 
 print("Final results saved to " + f"full_functional_test_{timestamp}.txt")
-print("Remember to measure and log the equivalent resistance!")
+print("Remember to check DS4, measure and log the equivalent resistance, and turn off the power supply!")
