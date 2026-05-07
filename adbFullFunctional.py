@@ -327,7 +327,7 @@ with open(f"full_functional_test_{timestamp}.txt", "w") as f:
     f.write(f"Time elapsed: {format_time(burn_segment_duration)}\n")
     f.write(f"Average voltage: {safe_avg(volt[burnStartIndex:]):.5f} V\n")
     f.write(f"Average current: {safe_avg(curr[burnStartIndex:]):.6f} A\n")
-    f.write(f"Calculated resistance:{(safe_avg(volt[burnStartIndex:])/safe_avg(curr[burnStartIndex:])):.6f}" )
+    f.write(f"Calculated resistance: {(safe_avg(volt[burnStartIndex:])/safe_avg(curr[burnStartIndex:])):.3f} ohms\n" )
     f.write(f"Average power: {burn_avg_power:.6f} W\n")
     f.write(f"Energy consumed: {burn_avg_power * burn_segment_duration:.3f} J\n")
     f.write(f"Deployment time: {format_time(deployment_duration)}\n")
@@ -340,3 +340,4 @@ with open(f"full_functional_test_{timestamp}.txt", "w") as f:
     f.write(f"Total energy consumed: {safe_avg(power) * timeElapsed:.3f} J\n")
 
 print("Final results saved to " + f"full_functional_test_{timestamp}.txt")
+print("Remember to measure and log the equivalent resistance!")
