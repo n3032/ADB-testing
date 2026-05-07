@@ -5,6 +5,7 @@ import csv
 from datetime import datetime
 import sys
 from ctypes import *
+from dwfconstants import *
 
 # Load Digilent WaveForms SDK
 if sys.platform.startswith("win"):
@@ -20,6 +21,12 @@ if dwf.FDwfDeviceOpen(c_int(-1), byref(hdwf)) == 0:
     print("failed to open DWF device")
     sys.exit(1)
 
+# Set parameter for what happens when device closes
+dwf.FDwfParamSet(DwfParamOnClose, c_int(0))  # 0 = run, 1 = stop, 2 = shutdown
+
+# Disable auto-configure to manually configure Digital IO
+dwf.FDwfDeviceAutoConfigureSet(hdwf, c_int(0))
+
 psu = pyvisa.ResourceManager().open_resource('USB0::0x1AB1::0x0E11::DP8C234305873::INSTR')
 
 #chat changes-----
@@ -28,10 +35,12 @@ psu = pyvisa.ResourceManager().open_resource('USB0::0x1AB1::0x0E11::DP8C23430587
 # DIO1 = DET1 (input)
 # DIO2 = DET2 (input)
 
-dwf.FDwfDigitalIOOutputEnableSet(hdwf, c_int(0b00000001))  # DIO0 output
-dwf.FDwfDigitalIOOutputSet(hdwf, c_int(0))                # BURN LOW
-
-# dwf.FDwfDigitalIOInputEnableSet(hdwf, c_int(0b00000110))  # DIO1, DIO2 inputs
+# Enable output on DIO0 (DIO1 and DIO2 will be inputs by default)
+dwf.FDwfDigitalIOOutputEnableSet(hdwf, c_int(0b00000001))
+# Set initial output value
+dwf.FDwfDigitalIOOutputSet(hdwf, c_int(0))
+# Apply the Digital IO configuration
+dwf.FDwfDigitalIOConfigure(hdwf)
 #------
 
 def format_time(seconds: float) -> str:
@@ -62,12 +71,13 @@ def burn(state: bool):
         hdwf, 
         c_int(1 if state else 0)
     )
+    dwf.FDwfDigitalIOConfigure(hdwf)
 
 
 chan1 = 1
 volt7V2 = 7.2
 rbfCurrThreshold = 0.004
-burnCurrThreshold = 0.5
+burnCurrThreshold = 0.1
 currLim = 3.0
 errors = 0
 
@@ -163,6 +173,7 @@ while True:
             psu.write(f'INST:NSEL {chan1}')
             psu.write('OUTP ON')
         continue             # retry loop
+    print(f"{curr_val}")
     if curr_val >= burnCurrThreshold:
         break
 burn(False)
