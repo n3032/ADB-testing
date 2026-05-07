@@ -99,9 +99,10 @@ print("*  EGSE GND is connected to PSU Channel 1 -.")
 print("*  AD3 GND is connected to EGSE GND.")
 print("*  AD3 DIO0 is connected to EGSE BURN.")
 print("*  AD3 DIO1 is connected to EGSE DET_1.")
-print("*  AD3 DIO2 is connected to EGSE DET_2.")
-#print("*  ADB is NOT connected to the EGSE.")
+print("*  AD3 DIO2 is connected to EGSE DET_2.") 
+# print("*  ADB is NOT connected to the EGSE.")
 print("*  ADB is connected to the EGSE.")
+print("*  ADB DPL signal functionality has been tested.")
 ask("Connections verified?")
 '''
 print("Testing BURN signal connection...")
@@ -124,6 +125,7 @@ psu.write(f'INST:NSEL {chan1}')
 psu.write('OUTP ON')
 
 ask("Verified DS1 is ON and EGSE BURN is OFF?")
+
 '''
 print("*  Depress SW1.")
 print("Waiting for DET1 to go low...")
@@ -152,6 +154,7 @@ print("DET2 released.")
 
 print("*  Depress both SW1 and SW2.")
 '''
+
 ask("Ready to test burn signal functionality?")
 print("Testing BURN signal functionality...")
 burn(True)
@@ -328,17 +331,14 @@ with open(f"full_functional_test_{timestamp}.txt", "w") as f:
     f.write(f"Time elapsed: {format_time(burn_segment_duration)}\n")
     f.write(f"Average voltage: {safe_avg(volt[burnStartIndex:]):.5f} V\n")
     f.write(f"Average current: {safe_avg(curr[burnStartIndex:]):.6f} A\n")
-    f.write(f"Calculated resistance: {(safe_avg(volt[burnStartIndex:])/safe_avg(curr[burnStartIndex:])):.3f} ohms\n" )
+    f.write(f"Calculated resistance: {(safe_avg(volt[burnStartIndex:])/(safe_avg(curr[burnStartIndex:])-timer_avg_power)):.3f} ohms\n" )
     f.write(f"Average power: {burn_avg_power:.5f} W\n")
     f.write(f"Energy consumed: {burn_avg_power * burn_segment_duration:.3f} J\n")
     f.write(f"Deployment time: {format_time(deployment_duration)}\n")
     f.write("\n")
     f.write("Overall Results:\n")
     f.write(f"Total time elapsed: {format_time(timeElapsed)}\n")
-    f.write(f"Overall average voltage: {safe_avg(volt):.5f} V\n")
-    f.write(f"Overall average current: {safe_avg(curr):.6f} A\n")
-    f.write(f"Overall average power: {safe_avg(power):.5f} W\n")
-    f.write(f"Total energy consumed: {safe_avg(power) * timeElapsed:.3f} J\n")
+    f.write(f"Total energy consumed: {(burn_avg_power * burn_segment_duration+timer_avg_power * timer_segment_duration):.3f} J\n")
 
 print("Final results saved to " + f"full_functional_test_{timestamp}.txt")
 print("Remember to check DS4, measure and log the equivalent resistance, and turn off the power supply!")
