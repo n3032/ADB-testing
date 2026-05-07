@@ -229,6 +229,7 @@ volt = []
 power = []
 errors = 0
 burning = False
+deployed = False
 burnStartIndex = 0
 burnTime = 0.0
 deploymentDetected = 0.0
@@ -271,9 +272,10 @@ while testing:
         testing = False
         break
 
-    if burning and (read_DIO(DET1) and read_DIO(DET2)):
+    if burning and (read_DIO(DET1) and read_DIO(DET2)) and not deployed:
         print("Both deployments detected. Waiting for self-disable...")
         deploymentDetected = timeElapsed
+        deployed = True
 
     if curr_val <= burnCurrThreshold and burning:
         print("Self-disable detected. Ending test.")
@@ -283,7 +285,11 @@ while testing:
     volt.append(volt_val)
     power.append(pow_val)
     pollTime.append(timeElapsed)
-    time.sleep(0.25)
+    if not burning:
+        time.sleep(0.25)
+    else:
+        time.sleep(0.05)
+    
     if (timeElapsed % 60) < 0.25:
         err = psu.query('SYST:ERR?')
         if not err.startswith('0'):
