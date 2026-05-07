@@ -272,8 +272,6 @@ while testing:
     if burning and (read_DIO(DET1) and read_DIO(DET2)):
         print("Both deployments detected. Waiting for self-disable...")
         deploymentDetected = timeElapsed
-        testing = False
-        break
 
     if curr_val <= burnCurrThreshold and burning:
         print("Self-disable detected. Ending test.")
