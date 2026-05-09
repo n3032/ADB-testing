@@ -94,7 +94,7 @@ time.sleep(0.2)
 print("Starting full functional test...\n")
 
 print("Ensure the following before proceeding:")
-print("*  EGSE 7V2 is connected to PSU Channel 1 +y.")
+print("*  EGSE 7V2 is connected to PSU Channel 1 +.")
 print("*  EGSE GND is connected to PSU Channel 1 -.")
 print("*  AD3 GND is connected to EGSE GND.")
 print("*  AD3 DIO0 is connected to EGSE BURN.")
@@ -216,6 +216,7 @@ while True:
             psu.write(f'CURR {currLim}') # set current limit
             psu.write(f'INST:NSEL {chan1}')
             psu.write('OUTP ON')
+            errors = 0
         continue             # retry loop
     if curr_val >= rbfCurrThreshold:
         break
@@ -233,10 +234,13 @@ volt = []
 power = []
 errors = 0
 burning = False
-deployed = False
+dpl1Bool = False
+dpl2Bool = False
 burnStartIndex = 0
 burnTime = 0.0
-deploymentDetected = 0.0
+dpl1Time = 0.0
+dpl2Time = 0.0
+
 
 psu.write(f'INST:NSEL {chan1}')
 while testing:
@@ -276,14 +280,19 @@ while testing:
         testing = False
         break
 
-    if burning and (read_DIO(DET1) and read_DIO(DET2)) and not deployed:
-        print("Both deployments detected. Waiting for self-disable...")
-        deploymentDetected = timeElapsed
-        deployed = True
+    if burning and (read_DIO(DET1)) and not dpl1Bool:
+        print("DPL1 detected.")
+        dpl1Time = timeElapsed
+        dpl1Bool = True
+
+    if burning and (read_DIO(DET2)) and not dpl2Bool:
+        print("DPL2 detected.")
+        dpl2Time = timeElapsed
+        dpl2Bool = True
 
     if curr_val <= burnCurrThreshold and burning:
         print("Self-disable detected. Ending test.")
-        break
+        testing = False
 
     curr.append(curr_val)
     volt.append(volt_val)
@@ -310,7 +319,10 @@ with open(f"full_functional_test_{timestamp}_data.csv", 'w', newline='') as csvf
 print("Data saved to " + f"full_functional_test_{timestamp}_data.csv")
 
 timer_segment_duration = burnTime
-deployment_duration = deploymentDetected-burnTime
+if dpl1Time > dpl2Time:
+    deployment_duration = dpl1Time-burnTime
+else:
+    deployment_duration = dpl2Time-burnTime
 burn_segment_duration = timeElapsed - burnTime
 
 def safe_avg(data):
@@ -335,7 +347,9 @@ with open(f"full_functional_test_{timestamp}.txt", "w") as f:
     f.write(f"Calculated resistance: {(safe_avg(volt[burnStartIndex:])/(safe_avg(curr[burnStartIndex:])-timer_avg_power)):.3f} ohms\n" )
     f.write(f"Average power: {burn_avg_power:.5f} W\n")
     f.write(f"Energy consumed: {burn_avg_power * burn_segment_duration:.3f} J\n")
-    f.write(f"Deployment time: {format_time(deployment_duration)}\n")
+    f.write(f"DPL1 time: {format_time(dpl1Time-burnTime)}\n")
+    f.write(f"DPL2 time: {format_time(dpl2Time-burnTime)}\n")
+    f.write(f"Overall deployment time: {format_time(deployment_duration)}\n")
     f.write("\n")
     f.write("Overall Results:\n")
     f.write(f"Total time elapsed: {format_time(timeElapsed)}\n")

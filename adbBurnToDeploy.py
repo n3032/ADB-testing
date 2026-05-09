@@ -93,13 +93,19 @@ time.sleep(0.2)
 print("Starting burn wire consistency test...\n")
 
 print("Ensure the following before proceeding:")
-print("*  GND is connected to EGSE GND.")
-print("*  DIO0 is connected to EGSE BURN.")
-print("*  DIO1 is connected to EGSE DET_1.")
-print("*  DIO2 is connected to EGSE DET_2.")
-print("*  ADB is NOT connected to the EGSE.")
+print("*  EGSE 7V2 is connected to PSU Channel 1 +.")
+print("*  EGSE GND is connected to PSU Channel 1 -.")
+print("*  AD3 GND is connected to EGSE GND.")
+print("*  AD3 DIO0 is connected to EGSE BURN.")
+print("*  AD3 DIO1 is connected to EGSE DET_1.")
+print("*  AD3 DIO2 is connected to EGSE DET_2.") 
+# print("*  ADB is NOT connected to the EGSE.")
+print("*  RBF is NOT connected to ADB J2.")
+print("*  ADB is connected to the EGSE.")
+print("*  ADB DPL signal functionality has been tested.")
 ask("Connections verified?")
 
+'''
 print("Testing BURN functionality...")
 burn(True)
 ask("Verified EGSE BURN is ON?")
@@ -115,11 +121,12 @@ ask("ADB connected to EGSE?")
 
 print("Turning on EGSE...")
 
+print("*  Set up antennas, and depress SW1 and SW2.")
+'''
+ask("Ready to begin burn test?")
+
 psu.write(f'INST:NSEL {chan1}')
 psu.write('OUTP ON')
-
-print("*  Set up antennas, and depress SW1 and SW2.")
-ask("Ready to begin burn test?")
 
 burn(True)
 
@@ -135,8 +142,10 @@ curr = []
 volt = []
 power = []
 errors = 0
-burnStartIndex = 0
-burnTime = 0.0
+dpl1Bool = False
+dpl2Bool = False
+dpl1Time = 0.0
+dpl2Time = 0.0
 
 psu.write(f'INST:NSEL {chan1}')
 while testing:
@@ -165,14 +174,25 @@ while testing:
 
     print(f"Time: {format_time(timeElapsed)}, Voltage: {volt_val:.3f}V, Current: {curr_val:.6f} A, Power: {pow_val:.6f} W")
 
-    if (read_DIO(DET1) and read_DIO(DET2)):
-        print("Both deployments detected. Ending test.")
-        testing = False
+    if (read_DIO(DET1)) and not dpl1Bool:
+        print("DPL1 detected.")
+        dpl1Time = timeElapsed
+        dpl1Bool = True
+
+    if (read_DIO(DET2)) and not dpl2Bool:
+        print("DPL2 detected.")
+        dpl2Time = timeElapsed
+        dpl2Bool = True
 
     curr.append(curr_val)
     volt.append(volt_val)
     power.append(pow_val)
     pollTime.append(timeElapsed)
+
+    if dpl1Bool and dpl2Bool:
+        print("Both deployments detected, ending test...")
+        testing = False
+
     if (timeElapsed % 60) < 0.25:
         err = psu.query('SYST:ERR?')
         if not err.startswith('0'):
@@ -197,6 +217,8 @@ print("Data saved to " + f"burn_test_{timestamp}_data.csv")
 with open(f"burn_test_{timestamp}.txt", "w") as f:
     f.write(f"Final Results for test {timestamp}\n")
     f.write(f"Total time elapsed: {format_time(timeElapsed)}\n")
+    f.write(f"DPL1 time: {format_time(dpl1Time)}\n")
+    f.write(f"DPL2 time: {format_time(dpl2Time)}\n")    
     f.write(f"Overall average voltage: {sum(volt)/len(volt):.6f} V\n")
     f.write(f"Overall average current: {sum(curr)/len(curr):.6f} A\n")
     f.write(f"Overall average power: {sum(power)/len(power):.6f} W\n")
