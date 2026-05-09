@@ -189,8 +189,8 @@ while testing:
     power.append(pow_val)
     pollTime.append(timeElapsed)
 
-    if dpl1Bool and dpl2Bool:
-        print("Both deployments detected, ending test...")
+    if timeElapsed > 30:
+        print("30 seconds elapsed, ending test...")
         testing = False
 
     if (timeElapsed % 60) < 0.25:
