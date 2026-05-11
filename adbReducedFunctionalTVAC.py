@@ -91,7 +91,7 @@ psu.write(f'CURR {currLim}') # set current limit
 
 time.sleep(0.2)
 
-print("Starting reduced functional test for TVAC...\n")
+print("Starting RFT2 for TVAC thermal cycling...\n")
 
 print("Ensure the following before proceeding:")
 print("*  EGSE 7V2 is connected to PSU Channel 1 +.")
@@ -146,4 +146,4 @@ psu.write('OUTP OFF')
 
 print("Burn signal functionality verified.\n")
 
-print("RFT complete!")
+print("RFT2 complete!")

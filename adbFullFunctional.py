@@ -106,20 +106,6 @@ print("*  ADB is connected to the EGSE.")
 print("*  ADB DPL signal functionality has been tested.")
 print("*  EGSE functionality has been tested.")
 ask("Connections verified?")
-'''
-print("Testing BURN signal connection...")
-burn(True)
-ask("Verified EGSE BURN is ON?")
-burn(False)
-
-print("*  Set up and tension burn wires.\n")
-
-ask("Verified stability of burn wires?")
-
-print("*  Connect ADB to EGSE.")
-
-ask("ADB connected to EGSE?")
-'''
 
 print("Turning on EGSE...")
 
@@ -128,35 +114,6 @@ psu.write('OUTP ON')
 
 ask("Verified DS1 is ON?")
 ask("Verified DS2 changes state every 3.8-3.9 seconds?")
-
-'''
-print("*  Depress SW1.")
-print("Waiting for DET1 to go low...")
-while read_DIO(DET1):
-    time.sleep(0.1)
-print("DET1 went low.")
-ask("Verified DS2 is ON and EGSE DET1 is OFF?")
-
-print("*  Release SW1.")
-print("Waiting for DET1 to go high...")
-while not read_DIO(DET1):
-    time.sleep(0.1)
-print("DET1 went high.")
-
-print("*  Depress SW2.")
-print("Waiting for DET2 to go low...")
-while read_DIO(DET2):
-    time.sleep(0.1)
-ask("Verified DS2 is ON and EGSE DET2 is OFF?")
-
-print("*  Release SW2.")
-print("Waiting for DET2 to release...")
-while not read_DIO(DET2):
-    time.sleep(0.1)
-print("DET2 released.")
-
-print("*  Depress both SW1 and SW2.")
-'''
 
 ask("Ready to test burn signal functionality?")
 print("Testing BURN signal functionality...")
@@ -286,13 +243,13 @@ while testing:
 
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")  # e.g. 20260112_153045
 
-with open(f"full_functional_test_{timestamp}_data.csv", 'w', newline='') as csvfile:
+with open(f"adb_fft_{timestamp}_data.csv", 'w', newline='') as csvfile:
     writer = csv.writer(csvfile)
     writer.writerow(['Time (MM:SS.mmm)', 'Voltage (V)', 'Current (A)', 'Power (W)'])
     for t, v, c, p in zip(pollTime, volt, curr, power):
         writer.writerow([format_time(t), f"{v:.4f}", f"{c:.4f}", f"{p:.3f}"])
 
-print("Data saved to " + f"full_functional_test_{timestamp}_data.csv")
+print("Data saved to " + f"adb_fft_{timestamp}_data.csv")
 
 timer_segment_duration = burnTime
 if dpl1Time > dpl2Time:
@@ -307,7 +264,7 @@ def safe_avg(data):
 timer_avg_power = safe_avg(power[:burnStartIndex])
 burn_avg_power = safe_avg(power[burnStartIndex:])
 
-with open(f"full_functional_test_{timestamp}.txt", "w") as f:
+with open(f"adb_fft_{timestamp}.txt", "w") as f:
     f.write(f"Final Results for test {timestamp}\n")
     f.write("Timer segment:\n")
     f.write(f"Time elapsed: {format_time(timer_segment_duration)}\n")
@@ -331,6 +288,6 @@ with open(f"full_functional_test_{timestamp}.txt", "w") as f:
     f.write(f"Total time elapsed: {format_time(timeElapsed)}\n")
     f.write(f"Total energy consumed: {(burn_avg_power * burn_segment_duration+timer_avg_power * timer_segment_duration):.3f} J\n")
 
-print("Final results saved to " + f"full_functional_test_{timestamp}.txt")
+print("Final results saved to " + f"adb_fft_{timestamp}.txt")
 print("Remember to verify DS4 is ON, measure and log the equivalent resistance, and turn off the power supply!")
 print("FFT complete!")
