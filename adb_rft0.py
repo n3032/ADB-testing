@@ -170,5 +170,9 @@ while True:
         break
 burn(False)
 print("Burn signal functionality verified.\n")
+print("Turning off PSU...")
+psu.write(f'INST:NSEL {chan1}')
+psu.write('OUTP OFF')
+
 
 print("RFT0 complete!")

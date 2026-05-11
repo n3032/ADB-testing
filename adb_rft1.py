@@ -106,57 +106,6 @@ print("*  ADB is connected to the EGSE.")
 print("*  ADB DPL signal functionality has been tested.")
 print("*  EGSE functionality has been tested.")
 ask("Connections verified?")
-'''
-print("Testing BURN signal connection...")
-burn(True)
-ask("Verified EGSE BURN is ON?")
-burn(False)
-
-print("*  Set up and tension burn wires.\n")
-
-ask("Verified stability of burn wires?")
-
-print("*  Connect ADB to EGSE.")
-
-ask("ADB connected to EGSE?")
-'''
-
-print("Turning on EGSE...")
-
-psu.write(f'INST:NSEL {chan1}')
-psu.write('OUTP ON')
-
-ask("Verified DS1 is ON?")
-ask("Verified DS2 changes state every 3.8-3.9 seconds?")
-
-'''
-print("*  Depress SW1.")
-print("Waiting for DET1 to go low...")
-while read_DIO(DET1):
-    time.sleep(0.1)
-print("DET1 went low.")
-ask("Verified DS2 is ON and EGSE DET1 is OFF?")
-
-print("*  Release SW1.")
-print("Waiting for DET1 to go high...")
-while not read_DIO(DET1):
-    time.sleep(0.1)
-print("DET1 went high.")
-
-print("*  Depress SW2.")
-print("Waiting for DET2 to go low...")
-while read_DIO(DET2):
-    time.sleep(0.1)
-ask("Verified DS2 is ON and EGSE DET2 is OFF?")
-
-print("*  Release SW2.")
-print("Waiting for DET2 to release...")
-while not read_DIO(DET2):
-    time.sleep(0.1)
-print("DET2 released.")
-
-print("*  Depress both SW1 and SW2.")
-'''
 
 ask("Ready to test burn signal functionality?")
 print("Testing BURN signal functionality...")
@@ -209,7 +158,6 @@ curr = []
 volt = []
 power = []
 errors = 0
-burning = False
 dpl1Bool = False
 dpl2Bool = False
 burnStartIndex = 0
@@ -245,19 +193,20 @@ while testing:
 
     print(f"Time: {format_time(timeElapsed)}, Voltage: {volt_val:.4f}V, Current: {curr_val:.4f} A, Power: {pow_val:.3f} W")
 
-    if curr_val >= burnCurrThreshold and not burning:
-        print("Timer triggered at time:", format_time(timeElapsed))
-        testing = False
-        break
-
     curr.append(curr_val)
     volt.append(volt_val)
     power.append(pow_val)
     pollTime.append(timeElapsed)
-    if not burning:
-        time.sleep(0.25)
-    else:
-        time.sleep(0.05)
+
+    if curr_val >= burnCurrThreshold:
+        print("Timer triggered at time:", format_time(timeElapsed))
+        print("Turning off PSU...")
+        psu.write(f'INST:NSEL {chan1}')
+        psu.write('OUTP OFF')
+        testing = False        
+        break
+
+    time.sleep(0.25)
     
     if (timeElapsed % 60) < 0.25:
         err = psu.query('SYST:ERR?')

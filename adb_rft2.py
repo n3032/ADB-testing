@@ -141,9 +141,10 @@ while True:
     if curr_val >= burnCurrThreshold:
         break
 burn(False)
-psu.write('INST:NSEL {chan1}')
-psu.write('OUTP OFF')
 
 print("Burn signal functionality verified.\n")
+print("Turning off PSU...")
+psu.write(f'INST:NSEL {chan1}')
+psu.write('OUTP OFF')
 
 print("RFT2 complete!")
