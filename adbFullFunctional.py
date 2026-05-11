@@ -91,7 +91,7 @@ psu.write(f'CURR {currLim}') # set current limit
 
 time.sleep(0.2)
 
-print("Starting full functional test...\n")
+print("Starting full functional test for TVAC...\n")
 
 print("Ensure the following before proceeding:")
 print("*  EGSE 7V2 is connected to PSU Channel 1 +.")
@@ -104,6 +104,7 @@ print("*  AD3 DIO2 is connected to EGSE DET_2.")
 print("*  RBF is NOT connected to ADB J2.")
 print("*  ADB is connected to the EGSE.")
 print("*  ADB DPL signal functionality has been tested.")
+print("*  EGSE functionality has been tested.")
 ask("Connections verified?")
 '''
 print("Testing BURN signal connection...")
@@ -125,7 +126,8 @@ print("Turning on EGSE...")
 psu.write(f'INST:NSEL {chan1}')
 psu.write('OUTP ON')
 
-ask("Verified DS1 is ON and EGSE BURN is OFF?")
+ask("Verified DS1 is ON?")
+ask("Verified DS2 changes state every 3.8-3.9 seconds?")
 
 '''
 print("*  Depress SW1.")
@@ -183,45 +185,19 @@ while True:
     if curr_val >= burnCurrThreshold:
         break
 burn(False)
+psu.write('INST:NSEL {chan1}')
+psu.write('OUTP OFF')
+
 print("Burn signal functionality verified.\n")
-'''
-print("*  Release SW1 and SW2.")
-'''
 
-print("*  Connect RBF to J2")
-ask("Verified DS1 is OFF?")
+ask("Ready to start timer?")
 
-print("*  Set up antennas, and depress SW1 and SW2.")
-ask("Ready to remove RBF?")
+print("Starting timer...\n")
 
-print("*  Remove RBF from J2")
-print("Waiting for current spike indicating RBF removal...")
+time.sleep(1)
 
-while True:
-    try:
-        curr_val = float(psu.query('MEAS:CURR?'))
-    except VisaIOError: # this was chatgpt'd 
-        psu.clear()          # clears IO buffers
-        time.sleep(1)
-        errors += 1
-        if errors > 5:
-            psu.close()
-            time.sleep(2)
-            psu = pyvisa.ResourceManager().open_resource('USB0::0x1AB1::0x0E11::DP8C234305873::INSTR')
-            print("PSU connection reset due to repeated timeouts")
-            psu.timeout = 1000
-            psu.write('*RST') # resets to default state
-            psu.write(f'INST:NSEL {chan1}') # select channel 1
-            psu.write(f'VOLT {volt7V2}') # set voltage
-            psu.write(f'CURR {currLim}') # set current limit
-            psu.write(f'INST:NSEL {chan1}')
-            psu.write('OUTP ON')
-            errors = 0
-        continue             # retry loop
-    if curr_val >= rbfCurrThreshold:
-        break
-
-print("RBF removal current spike detected. Starting timer...\n")
+psu.write(f'INST:NSEL {chan1}')
+psu.write('OUTP ON')
 
 t0 = time.time() #start time
 
@@ -356,4 +332,5 @@ with open(f"full_functional_test_{timestamp}.txt", "w") as f:
     f.write(f"Total energy consumed: {(burn_avg_power * burn_segment_duration+timer_avg_power * timer_segment_duration):.3f} J\n")
 
 print("Final results saved to " + f"full_functional_test_{timestamp}.txt")
-print("Remember to check DS4, measure and log the equivalent resistance, and turn off the power supply!")
+print("Remember to verify DS4 is ON, measure and log the equivalent resistance, and turn off the power supply!")
+print("FFT complete!")
