@@ -135,6 +135,7 @@ while True:
             psu.write(f'CURR {currLim}') # set current limit
             psu.write(f'INST:NSEL {chan1}')
             psu.write('OUTP ON')
+            errors = 0
         continue             # retry loop
     print(f"{curr_val}")
     if curr_val >= burnCurrThreshold:
