@@ -122,7 +122,7 @@ print("Waiting for DET1 to go low...")
 while read_DIO(DET1):
     time.sleep(0.1)
 print("DET1 went low.")
-ask("Verified DS2 is ON and EGSE DET1 is OFF?")
+ask("Verified EGSE DET1 is OFF?")
 
 print("*  Release SW1.")
 print("Waiting for DET1 to go high...")
@@ -134,7 +134,7 @@ print("*  Depress and hold SW2.")
 print("Waiting for DET2 to go low...")
 while read_DIO(DET2):
     time.sleep(0.1)
-ask("Verified DS2 is ON and EGSE DET2 is OFF?")
+ask("Verified EGSE DET2 is OFF?")
 
 print("*  Release SW2.")
 print("Waiting for DET2 to release...")

@@ -107,8 +107,14 @@ print("*  ADB DPL signal functionality has been tested.")
 print("*  EGSE functionality has been tested.")
 ask("Connections verified?")
 
+print("Turning on EGSE...")
+
+psu.write(f'INST:NSEL {chan1}')
+psu.write('OUTP ON')
+
 ask("Ready to test burn signal functionality?")
 print("Testing BURN signal functionality...")
+
 burn(True)
 while True:
     try:
@@ -134,8 +140,6 @@ while True:
     if curr_val >= burnCurrThreshold:
         break
 burn(False)
-psu.write('INST:NSEL {chan1}')
-psu.write('OUTP OFF')
 
 print("Burn signal functionality verified.\n")
 
@@ -227,9 +231,6 @@ timer_segment_duration = timeElapsed
 
 def safe_avg(data):
     return sum(data) / len(data) if data else 0
-
-timer_avg_power = safe_avg(power[:burnStartIndex])
-burn_avg_power = safe_avg(power[burnStartIndex:])
 
 with open(f"adb_rft1_{timestamp}.txt", "w") as f:
     f.write(f"Final Results for test {timestamp}\n")
