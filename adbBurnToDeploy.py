@@ -224,4 +224,4 @@ with open(f"burn_test_{timestamp}.txt", "w") as f:
     f.write(f"Overall average power: {sum(power)/len(power):.6f} W\n")
     f.write(f"Total energy consumed: {sum(power)*timeElapsed/len(power):.3f} J\n")
 
-print("Final results saved to " + f"full_functional_test_{timestamp}.txt")
+print("Final results saved to " + f"burn_test_{timestamp}.txt")

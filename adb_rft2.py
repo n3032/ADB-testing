@@ -56,6 +56,7 @@ def ask(prompt: str):
             print("Verification failed, aborting...\n")
             psu.write('INST:NSEL 1'); psu.write('OUTP OFF')
             psu.write('INST:NSEL 2'); psu.write('OUTP OFF')
+            burn(False)
             sys.exit(0)
         else:
             break
