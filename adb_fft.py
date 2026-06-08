@@ -27,7 +27,13 @@ dwf.FDwfParamSet(DwfParamOnClose, c_int(0))  # 0 = run, 1 = stop, 2 = shutdown
 # Disable auto-configure to manually configure Digital IO
 dwf.FDwfDeviceAutoConfigureSet(hdwf, c_int(0))
 
-psu = pyvisa.ResourceManager().open_resource('USB0::0x1AB1::0x0E11::DP8C234305873::INSTR')
+rm = pyvisa.ResourceManager()
+psuresource = rm.list_resources()
+print("Available VISA resources:")
+for res in psuresource:
+	print(f" - {res}")
+
+psu = pyvisa.ResourceManager().open_resource(psuresource[0])
 
 #chat changes-----
 # DIO configuration
@@ -54,8 +60,7 @@ def ask(prompt: str):
         resp = input().strip().lower()
         if not resp or resp == 'n':
             print("Verification failed, aborting...\n")
-            psu.write('INST:NSEL 1'); psu.write('OUTP OFF')
-            psu.write('INST:NSEL 2'); psu.write('OUTP OFF')
+            psu.write('OUTP OFF')
             burn(False)
             sys.exit(0)
         else:
@@ -74,8 +79,6 @@ def burn(state: bool):
     )
     dwf.FDwfDigitalIOConfigure(hdwf)
 
-
-chan1 = 1
 volt7V2 = 7.2
 rbfCurrThreshold = 0.004
 burnCurrThreshold = 0.1
@@ -86,7 +89,6 @@ DET1 = 1
 DET2 = 2
 
 psu.write('*RST') # resets to default state
-psu.write(f'INST:NSEL {chan1}') # select channel 1
 psu.write(f'VOLT {volt7V2}') # set voltage
 psu.write(f'CURR {currLim}') # set current limit
 
@@ -110,7 +112,6 @@ ask("Connections verified?")
 
 print("Turning on EGSE...")
 
-psu.write(f'INST:NSEL {chan1}')
 psu.write('OUTP ON')
 
 ask("Verified DS1 is ON?")
@@ -129,14 +130,12 @@ while True:
         if errors > 5:
             psu.close()
             time.sleep(2)
-            psu = pyvisa.ResourceManager().open_resource('USB0::0x1AB1::0x0E11::DP8C234305873::INSTR')
+            psu = pyvisa.ResourceManager().open_resource(psuresource[0])
             print("PSU connection reset due to repeated timeouts")
             psu.timeout = 1000
             psu.write('*RST') # resets to default state
-            psu.write(f'INST:NSEL {chan1}') # select channel 1
             psu.write(f'VOLT {volt7V2}') # set voltage
             psu.write(f'CURR {currLim}') # set current limit
-            psu.write(f'INST:NSEL {chan1}')
             psu.write('OUTP ON')
             errors = 0
         continue             # retry loop
@@ -144,7 +143,6 @@ while True:
     if curr_val >= burnCurrThreshold:
         break
 burn(False)
-psu.write(f'INST:NSEL {chan1}')
 psu.write('OUTP OFF')
 
 print("Burn signal functionality verified.\n")
@@ -155,7 +153,6 @@ print("Starting timer...\n")
 
 time.sleep(1)
 
-psu.write(f'INST:NSEL {chan1}')
 psu.write('OUTP ON')
 
 t0 = time.time() #start time
@@ -176,8 +173,6 @@ burnTime = 0.0
 dpl1Time = 0.0
 dpl2Time = 0.0
 
-
-psu.write(f'INST:NSEL {chan1}')
 while testing:
     try:
         curr_val = float(psu.query('MEAS:CURR?'))
@@ -194,10 +189,8 @@ while testing:
             print("PSU connection reset due to repeated timeouts")
             psu.timeout = 1000
             psu.write('*RST') # resets to default state
-            psu.write(f'INST:NSEL {chan1}') # select channel 1
             psu.write(f'VOLT {volt7V2}') # set voltage
             psu.write(f'CURR {currLim}') # set current limit
-            psu.write(f'INST:NSEL {chan1}')
             psu.write('OUTP ON')
         continue             # retry loop
     timeElapsed = time.time() - t0
