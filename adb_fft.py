@@ -97,6 +97,8 @@ time.sleep(0.2)
 print("Starting full functional test for TVAC...\n")
 
 print("Ensure the following before proceeding:")
+print("*  SINGLE-CHANNEL Rigol DP811A PSU is being used.")
+print("*  DUT handler is grounded.")
 print("*  EGSE 7V2 is connected to PSU Channel 1 +.")
 print("*  EGSE GND is connected to PSU Channel 1 -.")
 print("*  AD3 GND is connected to EGSE GND.")
