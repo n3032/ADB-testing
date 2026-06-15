@@ -27,7 +27,13 @@ dwf.FDwfParamSet(DwfParamOnClose, c_int(0))  # 0 = run, 1 = stop, 2 = shutdown
 # Disable auto-configure to manually configure Digital IO
 dwf.FDwfDeviceAutoConfigureSet(hdwf, c_int(0))
 
-psu = pyvisa.ResourceManager().open_resource('USB0::0x1AB1::0x0E11::DP8C234305873::INSTR')
+rm = pyvisa.ResourceManager()
+psuresource = rm.list_resources()
+print("Available VISA resources:")
+for res in psuresource:
+	print(f" - {res}")
+
+psu = pyvisa.ResourceManager().open_resource(psuresource[0])
 
 # DIO configuration
 # DIO0 = BURN (output)
@@ -52,8 +58,7 @@ def ask(prompt: str):
         resp = input().strip().lower()
         if not resp or resp == 'n':
             print("Verification failed, aborting...\n")
-            psu.write('INST:NSEL 1'); psu.write('OUTP OFF')
-            psu.write('INST:NSEL 2'); psu.write('OUTP OFF')
+            psu.write('OUTP OFF')
             sys.exit(0)
         else:
             if resp == 'y':
@@ -84,7 +89,6 @@ DET1 = 1
 DET2 = 2
 
 psu.write('*RST') # resets to default state
-psu.write(f'INST:NSEL {chan1}') # select channel 1
 psu.write(f'VOLT {volt7V2}') # set voltage
 psu.write(f'CURR {currLim}') # set current limit
 
@@ -125,7 +129,6 @@ print("*  Set up antennas, and depress SW1 and SW2.")
 '''
 ask("Ready to begin burn test?")
 
-psu.write(f'INST:NSEL {chan1}')
 psu.write('OUTP ON')
 
 burn(True)
@@ -147,7 +150,6 @@ dpl2Bool = False
 dpl1Time = 0.0
 dpl2Time = 0.0
 
-psu.write(f'INST:NSEL {chan1}')
 while testing:
     try:
         curr_val = float(psu.query('MEAS:CURR?'))
@@ -164,10 +166,8 @@ while testing:
             print("PSU connection reset due to repeated timeouts")
             psu.timeout = 1000
             psu.write('*RST') # resets to default state
-            psu.write(f'INST:NSEL {chan1}') # select channel 1
             psu.write(f'VOLT {volt7V2}') # set voltage
             psu.write(f'CURR {currLim}') # set current limit
-            psu.write(f'INST:NSEL {chan1}')
             psu.write('OUTP ON')
         continue             # retry loop
     timeElapsed = time.time() - t0
@@ -201,7 +201,6 @@ while testing:
 
 print("Shutting off power...\n")
 burn(False)
-psu.write('INST:NSEL 1')
 psu.write('OUTP OFF')
 
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")  # e.g. 20260112_153045
